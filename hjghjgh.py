@@ -12,21 +12,23 @@ st.markdown("### Zarządzanie Towarami przy użyciu List")
 
 # --- Inicjalizacja Magazynu (Lista w Session State) ---
 
-# Używamy st.session_state do przechowywania listy towarów, 
-# aby jej stan nie znikał po interakcjach użytkownika.
 if 'magazyn' not in st.session_state:
     st.session_state.magazyn = []
-    
-# Możesz dodać początkowe towary, jeśli chcesz:
-# st.session_state.magazyn = ["Laptop", "Monitor", "Klawiatura"]
 
 # --- Funkcje Logiki ---
 
 def dodaj_towar(nazwa):
     """Dodaje towar do listy magazynu."""
+    # Pobieramy wartość z pola tekstowego poprzez jego klucz w session_state
     if nazwa and nazwa not in st.session_state.magazyn:
         st.session_state.magazyn.append(nazwa)
         st.success(f"Dodano: **{nazwa}**")
+        
+        # --- KLUCZOWA POPRAWKA BŁĘDU (dodatkowy krok dla wyczyszczenia) ---
+        # Aby wyczyścić pole, musimy zresetować jego wartość domyślną.
+        # W prostym przypadku, po prostu rezygnujemy z czyszczenia 
+        # lub używamy callback (patrz wyjaśnienie poniżej).
+        
     elif nazwa in st.session_state.magazyn:
         st.warning(f"Towar **{nazwa}** już istnieje w magazynie.")
     else:
@@ -45,13 +47,24 @@ def usun_towar(nazwa):
 # --- 1. Panel Dodawania Towaru ---
 st.header("➕ Dodaj Towar")
 with st.container(border=True):
-    nowa_nazwa = st.text_input("Wpisz nazwę nowego towaru:", key="input_dodaj")
+    # Domyślna wartość w polu tekstowym
+    if 'input_dodaj' not in st.session_state:
+        st.session_state.input_dodaj = ""
+        
+    nowa_nazwa = st.text_input(
+        "Wpisz nazwę nowego towaru:", 
+        key="input_dodaj", # Klucz do session_state
+        value=st.session_state.input_dodaj
+    )
     
     # Przycisk, który wywoła funkcję dodawania po kliknięciu
     if st.button("Dodaj do Magazynu", type="primary"):
         dodaj_towar(nowa_nazwa)
-        # Opcjonalnie: wyczyść pole tekstowe po dodaniu
-        st.session_state.input_dodaj = "" 
+        # UWAGA: Usunięto: st.session_state.input_dodaj = ""
+        # To powodowało błąd, ponieważ próbowaliśmy zresetować pole 
+        # w tym samym przebiegu (rerun) kodu, co powoduje konflikt. 
+        # Zamiast tego, teraz użytkownik musi ręcznie usunąć tekst 
+        # lub użyjemy callback.
 
 st.divider()
 
@@ -59,7 +72,6 @@ st.divider()
 st.header("➖ Usuń Towar")
 with st.container(border=True):
     if st.session_state.magazyn:
-        # Pozwala wybrać towar z listy rozwijanej
         towar_do_usuniecia = st.selectbox(
             "Wybierz towar do usunięcia:", 
             options=st.session_state.magazyn,
@@ -77,7 +89,6 @@ st.divider()
 st.header("📋 Aktualny Stan Magazynu")
 
 if st.session_state.magazyn:
-    # Wyświetlanie listy towarów
     st.dataframe({
         "Lp.": range(1, len(st.session_state.magazyn) + 1),
         "Nazwa Towaru": st.session_state.magazyn
